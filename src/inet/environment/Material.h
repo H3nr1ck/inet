@@ -39,10 +39,10 @@ class INET_API Material : public cNamedObject
     const double relativePermittivity;
     const double relativePermeability;
 
-    static std::map<const std::string, const Material *> materials;
+    static std::map<const std::string, Material> materials;
 
   protected:
-    static void addMaterial(const Material *material);
+    static void addMaterial(const char *name, Ohmm resistivity, double relativePermittivity, double relativePermeability);
 
   public:
     Material(const char *name, Ohmm resistivity, double relativePermittivity, double relativePermeability);
