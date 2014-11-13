@@ -2045,6 +2045,7 @@ double Ieee80211Mac::computeFrameDuration(Ieee80211Frame *msg)
     RadioTransmissionRequest *ctrl;
     double duration;
     EV_DEBUG << *msg;
+
     ctrl = dynamic_cast<RadioTransmissionRequest *>(msg->removeControlInfo());
     if (ctrl) {
         EV_DEBUG << "Per frame2 params bitrate " << ctrl->getBitrate().get() / 1e6 << "Mb" << endl;
