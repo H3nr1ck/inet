@@ -137,6 +137,7 @@ void RadioMedium::initialize(int stage)
         obstacleLoss = dynamic_cast<IObstacleLoss *>(getSubmodule("obstacleLoss"));
         analogModel = check_and_cast<IAnalogModel *>(getSubmodule("analogModel"));
         backgroundNoise = dynamic_cast<IBackgroundNoise *>(getSubmodule("backgroundNoise"));
+        parallelStrategy = dynamic_cast<IParallelStrategy *>(getSubmodule("parallelStrategy"));
         neighborCache = dynamic_cast<INeighborCache *>(getSubmodule("neighborCache"));
         const char *rangeFilterString = par("rangeFilter");
         if (!strcmp(rangeFilterString, ""))
@@ -841,20 +842,24 @@ void RadioMedium::addTransmission(const IRadio *transmitterRadio, const ITransmi
         baseTransmissionId = transmission->getId();
     transmissionCount++;
     transmissions.push_back(transmission);
-    simtime_t maxArrivalEndTime = simTime();
-    for (std::vector<const IRadio *>::const_iterator it = radios.begin(); it != radios.end(); it++) {
-        const IRadio *receiverRadio = *it;
-        if (receiverRadio != transmitterRadio) {
-            const IArrival *arrival = propagation->computeArrival(transmission, receiverRadio->getAntenna()->getMobility());
-            const IListening *listening = receiverRadio->getReceiver()->createListening(receiverRadio, arrival->getStartTime(), arrival->getEndTime(), arrival->getStartPosition(), arrival->getEndPosition());
-            const simtime_t arrivalEndTime = arrival->getEndTime();
-            if (arrivalEndTime > maxArrivalEndTime)
-                maxArrivalEndTime = arrivalEndTime;
-            setCachedArrival(receiverRadio, transmission, arrival);
-            setCachedListening(receiverRadio, transmission, listening);
+    if (parallelStrategy)
+        parallelStrategy->computeCache(&radios, &transmissions);
+    else {
+        simtime_t maxArrivalEndTime = simTime();
+        for (std::vector<const IRadio *>::const_iterator it = radios.begin(); it != radios.end(); it++) {
+            const IRadio *receiverRadio = *it;
+            if (receiverRadio != transmitterRadio) {
+                const IArrival *arrival = propagation->computeArrival(transmission, receiverRadio->getAntenna()->getMobility());
+                const IListening *listening = receiverRadio->getReceiver()->createListening(receiverRadio, arrival->getStartTime(), arrival->getEndTime(), arrival->getStartPosition(), arrival->getEndPosition());
+                const simtime_t arrivalEndTime = arrival->getEndTime();
+                if (arrivalEndTime > maxArrivalEndTime)
+                    maxArrivalEndTime = arrivalEndTime;
+                setCachedArrival(receiverRadio, transmission, arrival);
+                setCachedListening(receiverRadio, transmission, listening);
+            }
         }
+        getTransmissionCacheEntry(transmission)->interferenceEndTime = maxArrivalEndTime + maxTransmissionDuration;
     }
-    getTransmissionCacheEntry(transmission)->interferenceEndTime = maxArrivalEndTime + maxTransmissionDuration;
     if (!removeNonInterferingTransmissionsTimer->isScheduled()) {
         Enter_Method_Silent();
         scheduleAt(cache[0].interferenceEndTime, removeNonInterferingTransmissionsTimer);
