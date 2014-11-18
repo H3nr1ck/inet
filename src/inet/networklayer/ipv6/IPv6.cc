@@ -44,6 +44,38 @@ namespace inet {
 
 Define_Module(IPv6);
 
+IPv6::IPv6() :
+        ift(NULL),
+        rt(NULL),
+        nd(NULL),
+        icmp(NULL),
+        tunneling(NULL),
+        curFragmentId(0),
+        numMulticast(0),
+        numLocalDeliver(0),
+        numDropped(0),
+        numUnroutable(0),
+        numForwarded(0)
+{
+}
+
+IPv6::~IPv6()
+{
+}
+
+IPv6::ScheduledDatagram::ScheduledDatagram(IPv6Datagram *datagram, const InterfaceEntry *ie, MACAddress macAddr, bool fromHL) :
+        datagram(datagram),
+        ie(ie),
+        macAddr(macAddr),
+        fromHL(fromHL)
+{
+}
+
+IPv6::ScheduledDatagram::~ScheduledDatagram()
+{
+    delete datagram;
+}
+
 void IPv6::initialize(int stage)
 {
     if (stage == INITSTAGE_LOCAL) {
@@ -117,14 +149,14 @@ void IPv6::endService(cPacket *msg)
         ScheduledDatagram *sDgram = check_and_cast<ScheduledDatagram *>(msg);
 
         // take care of datagram which was supposed to be sent over a tentative address
-        if (sDgram->ie->ipv6Data()->isTentativeAddress(sDgram->datagram->getSrcAddress())) {
+        if (sDgram->getIE()->ipv6Data()->isTentativeAddress(sDgram->getSrcAddress())) {
             // address is still tentative - enqueue again
             queue.insert(sDgram);
         }
         else {
             // address is not tentative anymore - send out datagram
             numForwarded++;
-            fragmentAndSend(sDgram->datagram, sDgram->ie, sDgram->macAddr, sDgram->fromHL);
+            fragmentAndSend(sDgram->removeDatagram(), sDgram->getIE(), sDgram->getMACAddress(), sDgram->getFromHL());
             delete sDgram;
         }
     }
@@ -706,11 +738,7 @@ void IPv6::fragmentAndSend(IPv6Datagram *datagram, const InterfaceEntry *ie, con
         // as it can not be sent before the address' tentative status is cleared - CB
         if (ie->ipv6Data()->isTentativeAddress(srcAddr)) {
             EV_INFO << "Source address is tentative - enqueueing datagram for later resubmission." << endl;
-            ScheduledDatagram *sDgram = new ScheduledDatagram();
-            sDgram->datagram = datagram;
-            sDgram->ie = ie;
-            sDgram->macAddr = nextHopAddr;
-            sDgram->fromHL = fromHL;
+            ScheduledDatagram *sDgram = new ScheduledDatagram(datagram, ie, nextHopAddr, fromHL);
             queue.insert(sDgram);
             return;
         }

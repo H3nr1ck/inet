@@ -34,12 +34,22 @@ using namespace units::constants;
 // TODO: what about the dependency of physical properties on temperature, pressure, frequency, etc.?
 class INET_API Material : public cNamedObject
 {
+  public:
+    class MaterialMap
+    {
+      public:
+        typedef std::map<const std::string, const Material *> Map;
+        Map map;
+      public:
+        MaterialMap() {}
+        ~MaterialMap();
+    };
+
   protected:
     const Ohmm resistivity;
     const double relativePermittivity;
     const double relativePermeability;
-
-    static std::map<const std::string, const Material *> materials;
+    static MaterialMap materials;
 
   protected:
     static void addMaterial(const Material *material);

@@ -20,7 +20,13 @@
 
 namespace inet {
 
-std::map<const std::string, const Material *> Material::materials;
+Material::MaterialMap Material::materials;
+
+Material::MaterialMap::~MaterialMap()
+{
+    for (MaterialMap::Map::iterator it = materials.map.begin(); it != materials.map.end(); ++it)
+        delete it->second;
+}
 
 Material::Material(const char *name, Ohmm resistivity, double relativePermittivity, double relativePermeability) :
     cNamedObject(name),
@@ -47,12 +53,12 @@ mps Material::getPropagationSpeed() const
 
 void Material::addMaterial(const Material *material)
 {
-    materials.insert(std::pair<const std::string, const Material *>(material->getName(), material));
+    materials.map.insert(std::pair<const std::string, const Material *>(material->getName(), material));
 }
 
 const Material *Material::getMaterial(const char *name)
 {
-    if (materials.size() == 0)
+    if (materials.map.size() == 0)
     {
         // TODO: check values?
         addMaterial(new Material("vacuum", Ohmm(sNaN), 1, 1));
@@ -64,8 +70,8 @@ const Material *Material::getMaterial(const char *name)
         addMaterial(new Material("concrete", Ohmm(1E+2), 4.5, 1));
         addMaterial(new Material("glass", Ohmm(1E+12), 7, 1));
     }
-    std::map<const std::string, const Material *>::iterator it = materials.find(name);
-    return it != materials.end() ? it->second : NULL;
+    MaterialMap::Map::iterator it = materials.map.find(name);
+    return it != materials.map.end() ? it->second : NULL;
 }
 
 } // namespace inet

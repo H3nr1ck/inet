@@ -672,6 +672,9 @@ SCTPAssociation::~SCTPAssociation()
     if (state->asconfOutstanding && state->asconfChunk)
         delete state->asconfChunk;
 
+    for (SCTPSendStreamMap::iterator it = sendStreams.begin(); it != sendStreams.end(); ++it) {
+        delete it->second;
+    }
     delete fsm;
     delete state;
     delete sctpAlgorithm;

@@ -56,10 +56,30 @@ IPv6NeighbourDiscovery::~IPv6NeighbourDiscovery()
     // FIXME delete the following data structures, cancelAndDelete timers in them etc.
     // Deleting the data structures my become unnecessary if the lists store the
     // structs themselves and not pointers.
+
     //   RATimerList raTimerList;
+    for (RATimerList::iterator it=raTimerList.begin(); it != raTimerList.end(); ++it) {
+        cancelAndDelete(*it);
+        delete (*it);
+    }
+
     //   DADList dadList;
+    for (DADList::iterator it=dadList.begin(); it != dadList.end(); ++it) {
+        cancelAndDelete((*it)->timeoutMsg);
+        delete (*it);
+    }
+
     //   RDList rdList;
+    for (RDList::iterator it=rdList.begin(); it != rdList.end(); ++it) {
+        cancelAndDelete((*it)->timeoutMsg);
+        delete (*it);
+    }
+
     //   AdvIfList advIfList;
+    for (AdvIfList::iterator it=advIfList.begin(); it != advIfList.end(); ++it) {
+        cancelAndDelete((*it)->raTimeoutMsg);
+        delete (*it);
+    }
 }
 
 void IPv6NeighbourDiscovery::initialize(int stage)
@@ -488,6 +508,7 @@ void IPv6NeighbourDiscovery::processNUDTimeout(cMessage *timeoutMsg)
         EV_DETAIL << "Max number of probes have been sent." << endl;
         EV_DETAIL << "Neighbour is Unreachable, removing NCE." << endl;
         neighbourCache.remove(nceKey->address, nceKey->interfaceID);
+        delete timeoutMsg;
         return;
     }
 
